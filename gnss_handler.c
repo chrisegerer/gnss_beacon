@@ -1,14 +1,14 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
-#include "uart_handler.h"
+#include "gnss_handler.h"
 #include "bsp.h"
 #include "nrf_uarte.h"
 #include "app_uart.h"
 #include "app_error.h"
 
-#define UART_RX_BUF_SIZE 256
-#define UART_TX_BUF_SIZE 256
+#define UART_RX_BUF_SIZE 256U
+#define UART_TX_BUF_SIZE 256U
 #define UART_NO_PARITY false
 
 #define DATA_BUFFER_SIZE 32U
@@ -21,7 +21,7 @@ static uint8_t data_buffer[DATA_BUFFER_SIZE];
 
 static void uart_error_handle(app_uart_evt_t * p_event);
 
-uint32_t uart_handler_init(void)
+uint32_t gnss_handler_init(void)
 {
     uint32_t err_code = NRF_SUCCESS;
 
@@ -51,12 +51,13 @@ uint32_t uart_handler_init(void)
     return err_code;
 }
 
-bool uart_handler_receive(uint8_t * idx, uint8_t * buffer, uint8_t buffer_size)
+bool gnss_handler_receive(uint8_t * idx, uint8_t * buffer, uint8_t buffer_size)
 {
     bool new_location_received = false;
     uint8_t c;
 
-    if ((NULL != buffer) && (buffer_size > 0U))
+    // Check input params
+    if ((NULL != idx) && (NULL != buffer) && (0U < buffer_size))
     {
         while(NRF_SUCCESS == app_uart_get(&c))
         {
@@ -70,25 +71,25 @@ bool uart_handler_receive(uint8_t * idx, uint8_t * buffer, uint8_t buffer_size)
                 ++(*idx);
             }
         }
-    }
 
-    // remove any trailing CR or LF
-    if (*idx >= 2U)
-    {
-        if ((CR == buffer[*idx - 2U]) || (LF == buffer[*idx - 2U]))
+        // remove any trailing CR or LF
+        if (*idx >= 2U)
         {
-            *idx -= 2U;
-        }
-        else if ((CR == buffer[*idx - 1U]) || (LF == buffer[*idx - 1U]))
-        {
-            --(*idx);
+            if ((CR == buffer[*idx - 2U]) || (LF == buffer[*idx - 2U]))
+            {
+                *idx -= 2U;
+            }
+            else if ((CR == buffer[*idx - 1U]) || (LF == buffer[*idx - 1U]))
+            {
+                --(*idx);
+            }
         }
     }
 
     return new_location_received;
 }
 
-void uart_handler_transmit(const uint8_t * buffer, uint8_t buffer_size)
+void gnss_handler_transmit(const uint8_t * buffer, uint8_t buffer_size)
 {
     if ((NULL != buffer) && (buffer_size > 0U))
     {
@@ -100,6 +101,10 @@ void uart_handler_transmit(const uint8_t * buffer, uint8_t buffer_size)
         app_uart_put(LF);
     }
 }
+
+/*
+ * Private methods
+ */
 
 static void uart_error_handle(app_uart_evt_t * p_event)
 {

@@ -8,17 +8,18 @@
 #include "beacon_config.h"
 #include "beacon_manager.h"
 #include "location_service.h"
-#include "uart_handler.h"
 
 #define DEAD_BEEF 0xDEADBEEF /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 #define BEACON_INFO_INIT_DATA \
          '+', '0', '0', '.', '0', '0', '0', '0', '0', '0', ',', \
     '+', '0', '0', '0', '.', '0', '0', '0', '0', '0', '0'
 
-    static ble_gap_adv_params_t m_adv_params;                 /**< Parameters to be passed to the stack when starting advertising. */
-static uint8_t m_adv_handle = BLE_GAP_ADV_SET_HANDLE_NOT_SET; /**< Advertising handle used to identify an advertising set. */
-static uint8_t m_enc_advdata[2U][BLE_GAP_ADV_SET_DATA_SIZE_MAX];  /**< Buffer for storing an encoded advertising set. */
-static uint8_t m_enc_srdata[2U][BLE_GAP_ADV_SET_DATA_SIZE_MAX];   /**< Buffer for storing an encoded scan response set. */
+// Private data
+static int8_t m_ls_handle;                                          /**< Location service handle. */
+static ble_gap_adv_params_t m_adv_params;                           /**< Parameters to be passed to the stack when starting advertising. */
+static uint8_t m_adv_handle = BLE_GAP_ADV_SET_HANDLE_NOT_SET;       /**< Advertising handle used to identify an advertising set. */
+static uint8_t m_enc_advdata[2U][BLE_GAP_ADV_SET_DATA_SIZE_MAX];    /**< Buffer for storing an encoded advertising set. */
+static uint8_t m_enc_srdata[2U][BLE_GAP_ADV_SET_DATA_SIZE_MAX];     /**< Buffer for storing an encoded scan response set. */
 
 /**@brief Struct that contains pointers to the encoded advertising and scan response data. */
 static ble_gap_adv_data_t m_adv_data =
@@ -40,25 +41,31 @@ static uint8_t m_beacon_info[APP_BEACON_INFO_LENGTH] = /**< Information advertis
     BEACON_INFO_INIT_DATA
 };
 
+// Private method declarations
 static void ble_stack_init(void);
 static void gap_params_init(void);
 static void advertising_init(void);
 static void beacon_manager_accept(const LocationDataType * location_data);
 
+/*
+ * Public methods
+ */
+
+/**@brief Inits Beacon Manager module. */
 void beacon_manager_init(void)
 {
     ble_stack_init();
     gap_params_init();
     advertising_init();
 
-    if (false == location_service_subscribe(&beacon_manager_accept))
+    m_ls_handle = location_service_subscribe(&beacon_manager_accept);
+    if(m_ls_handle < 0)
     {
         /* todo: error handling in case subscription fails. */
     }
 }
 
-/**@brief Function for starting advertising.
- */
+/**@brief Function for starting advertising. */
 void beacon_advertising_start(void)
 {
     ret_code_t err_code;
@@ -86,12 +93,18 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t *p_file_name)
     app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
 
+/*
+ * Private methods
+ */
+
 /**@brief Subscription function for accepting new location data
- * 
- * @details This function can be used to subscribe to a location server and 
+ *
+ * @details This function can be used to subscribe to a location server and
  *          updates the advertised location data.
-*/
-static void beacon_manager_accept(const LocationDataType * location_data)
+ *
+ * @param[in]   location_data   Pointer to location data.
+ */
+static void beacon_manager_accept(const LocationDataType *location_data)
 {
     uint32_t err_code;
     ble_advdata_t advdata;
@@ -99,14 +112,8 @@ static void beacon_manager_accept(const LocationDataType * location_data)
     uint8_t flags = BLE_GAP_ADV_FLAG_BR_EDR_NOT_SUPPORTED;
     ble_advdata_manuf_data_t manuf_specific_data;
 
-    // echo location data on UART
-    uart_handler_transmit(location_data->latitude, sizeof(location_data->latitude));
-    uart_handler_transmit(location_data->longitude, sizeof(location_data->longitude));
-
     memset(m_beacon_info, 0U, sizeof(m_beacon_info));
-    memcpy(m_beacon_info, location_data->latitude, sizeof(location_data->latitude));
-    m_beacon_info[10U] = ',';
-    memcpy(&m_beacon_info[11U], location_data->longitude, sizeof(location_data->longitude));
+    location_data_serialize(location_data, m_beacon_info, sizeof(m_beacon_info));
 
     manuf_specific_data.company_identifier = APP_COMPANY_IDENTIFIER;
     manuf_specific_data.data.p_data = (uint8_t *)m_beacon_info;

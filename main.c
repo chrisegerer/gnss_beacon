@@ -53,7 +53,7 @@
 #include "bsp.h"
 #include "app_timer.h"
 #include "nrf_pwr_mgmt.h"
-#include "uart_handler.h"
+#include "gnss_handler.h"
 #include "location_service.h"
 #include "beacon_manager.h"
 
@@ -101,7 +101,7 @@ int main(void)
     timers_init();
     leds_init();
     power_management_init();
-    uart_handler_init();
+    gnss_handler_init();
     location_service_init();
     beacon_manager_init();
 

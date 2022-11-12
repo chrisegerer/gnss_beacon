@@ -53,7 +53,7 @@ SRC_FILES += \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_uarte.c \
   $(SDK_ROOT)/components/libraries/bsp/bsp.c \
   $(PROJ_DIR)/main.c \
-  $(PROJ_DIR)/uart_handler.c \
+  $(PROJ_DIR)/gnss_handler.c \
   $(PROJ_DIR)/location_service.c \
   $(PROJ_DIR)/beacon_manager.c \
   $(SDK_ROOT)/external/segger_rtt/SEGGER_RTT.c \
