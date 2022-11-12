@@ -25,7 +25,9 @@ On top of the nRF SDK, three components implement the main functionalities:
 In the infinite main loop, the function `location_service_update` is called continuously to check for new locations received and handles the idle state.
 
 ## Providing location data from PC
-New location data can be sent from PC via serial console. Valid data range is
+New location data can be sent from PC via serial console. Baudrate is 115200, 1 stop bit, no parity, no flow control.
+
+Valid data range is
 - latitude: +/- 90.000000 deg
 - longitude: +/- 180.000000 deg
 
